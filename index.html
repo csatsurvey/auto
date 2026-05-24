@@ -229,8 +229,9 @@ let DETECTED_COLS = { rating: [], nps: null, feedback: null };
 
 function parseDate(v) {
     if (!v) return null;
-    const m = String(v).match(/Date\((\d+),(\d+),(\d+)/);
-    if (m) return new Date(parseInt(m[1]), parseInt(m[2]), parseInt(m[3]));
+    const m = String(v).match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?/);
+    if (m) return new Date(parseInt(m[1]), parseInt(m[2]), parseInt(m[3]),
+        m[4] ? parseInt(m[4]) : 0, m[5] ? parseInt(m[5]) : 0, m[6] ? parseInt(m[6]) : 0);
     return new Date(v);
 }
 function colMatches(n, kws) { const l = n.toLowerCase(); return kws.some(k => l.includes(k)); }
@@ -398,7 +399,7 @@ function render(rows) {
     if (fbKey) {
         const html = rows.filter(r => r[fbKey] && String(r[fbKey]).trim()).map((r, i) => {
             const ts = r[tsKey];
-            const d  = ts instanceof Date && !isNaN(ts) ? ts.toLocaleDateString('mn-MN', {year:'numeric',month:'2-digit',day:'2-digit'}) : '—';
+            const d  = ts instanceof Date && !isNaN(ts) ? ts.toLocaleString('mn-MN', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
             return `<tr><td>${i+1}</td><td>${d}</td><td>${r[fbKey]}</td></tr>`;
         }).join('');
         document.getElementById('feedback-body').innerHTML = html ||
