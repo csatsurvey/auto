@@ -462,11 +462,13 @@ async function loadData() {
             cols.forEach((c, i) => {
                 const cell = r.c[i];
                 if (c === 'Timestamp' || c === 'Огноо') {
-                    // parseDate-аар Date объект үүсгэнэ
                     const dateObj = cell ? parseDate(cell.v) : null;
-                    // Харуулахад f (formatted) ашиглана, шүүлтэд dateObj ашиглана
-                    obj[c] = dateObj; // Date объект хадгална
-                    obj['_ts_display'] = cell?.f || (dateObj ? dateObj.toLocaleString('mn-MN', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : null);
+                    obj[c] = dateObj;
+                    // f талбар заавал авна — "25/05/2026 23:32:23" хэлбэртэй
+                    const fStr = (cell && cell.f) ? String(cell.f) : null;
+                    obj['_ts_display'] = fStr || (dateObj instanceof Date && !isNaN(dateObj)
+                        ? dateObj.toLocaleString('mn-MN', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+                        : null);
                     obj['_ts_date'] = dateObj;
                 } else {
                     obj[c] = cell ? cell.v : null;
