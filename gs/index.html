@@ -374,7 +374,7 @@ function updateDots() {
 // PIN-г Google Sheets-ийн "config" sheet A1 нүднээс татна
 async function fetchPin() {
     try {
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=config`;
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=1137161118`;
         const res  = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf(')')));
@@ -446,7 +446,7 @@ async function loadData() {
     try {
         // Sheet 0 (эхний sheet) — Form хариултуудын sheet
         // gid=0 → эхний sheet (Form хариултууд). Өөр sheet бол gid= дугаарыг URL-аас авна
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=0`;
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=1129539149`;
         const res  = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf(')')));
@@ -666,4 +666,3 @@ function exportExcel() {
 </script>
 </body>
 </html>
-
