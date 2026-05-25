@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Гранд Сутай ХХК — Сэтгэл ханамжийн судалгаа</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -503,7 +504,7 @@ function applyFilter() {
         const branchIdx = parseInt(currentBranch.replace('branch', ''));
         const branchName = BRANCHES[branchIdx];
         rows = rows.filter(r => r[DETECTED_COLS.branch] &&
-            String(r[DETECTED_COLS.branch]).trim() === branchName);
+            String(r[DETECTED_COLS.branch]).trim().toLowerCase().includes(branchName.toLowerCase().substring(0, 6)));
     }
 
     if (fromVal) { const f = new Date(fromVal); rows = rows.filter(r => r[tsKey] && r[tsKey] >= f); }
@@ -616,7 +617,7 @@ function render(rows) {
     if (fbKey) {
         const html = rows.filter(r => r[fbKey] && String(r[fbKey]).trim()).map((r, i) => {
             const ts = r[tsKey];
-            const d  = ts instanceof Date && !isNaN(ts) ? ts.toLocaleDateString('mn-MN', {year:'numeric',month:'2-digit',day:'2-digit'}) : '—';
+            const d  = ts instanceof Date && !isNaN(ts) ? ts.toLocaleString('mn-MN', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
             const br = branchKey && r[branchKey] ? String(r[branchKey]).substring(0, 12) : '—';
             return `<tr><td>${i+1}</td><td style="font-size:7.5pt">${br}</td><td>${d}</td><td>${r[fbKey]}</td></tr>`;
         }).join('');
@@ -645,26 +646,35 @@ function exportExcel() {
     if (!rows.length) { alert('Экспортлох өгөгдөл байхгүй байна.'); return; }
 
     const cols = Object.keys(rows[0]);
-    let csv = '\uFEFF'; // BOM for Excel UTF-8
-    csv += cols.map(c => `"${c}"`).join(',') + '\n';
-    rows.forEach(r => {
-        csv += cols.map(c => {
-            let v = r[c];
-            if (v instanceof Date && !isNaN(v)) v = v.toLocaleDateString('mn-MN');
-            return `"${String(v ?? '').replace(/"/g, '""')}"`;
-        }).join(',') + '\n';
-    });
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
     const date = new Date().toLocaleDateString('mn-MN').replace(/\//g, '-');
     const branchLabel = currentBranch === 'all' ? 'Нэгтгэсэн' :
         BRANCHES[parseInt(currentBranch.replace('branch', ''))].replace(/ /g, '_');
-    a.href = url;
-    a.download = `GrandSutai_${branchLabel}_${date}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+
+    // SheetJS ашиглан .xlsx үүсгэнэ
+    const wsData = [cols];
+    rows.forEach(r => {
+        wsData.push(cols.map(c => {
+            let v = r[c];
+            if (v instanceof Date && !isNaN(v)) return v.toLocaleString('mn-MN');
+            return v ?? '';
+        }));
+    });
+
+    if (typeof XLSX !== 'undefined') {
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Өгөгдөл');
+        XLSX.writeFile(wb, `GrandSutai_${branchLabel}_${date}.xlsx`);
+    } else {
+        // Fallback: CSV
+        let csv = '\uFEFF';
+        wsData.forEach(row => { csv += row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',') + '\n'; });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = `GrandSutai_${branchLabel}_${date}.csv`; a.click();
+        URL.revokeObjectURL(url);
+    }
 }
 </script>
 </body>
