@@ -446,7 +446,7 @@ async function loadData() {
     try {
         // Sheet 0 (эхний sheet) — Form хариултуудын sheet
         // gid=0 → эхний sheet (Form хариултууд). Өөр sheet бол gid= дугаарыг URL-аас авна
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=1137161118`;
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&gid=1137161118`;
         const res  = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf(')')));
