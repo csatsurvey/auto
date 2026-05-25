@@ -378,9 +378,12 @@ async function fetchPin() {
         const res  = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf(')')));
-        const val = json?.table?.rows?.[0]?.c?.[0]?.v;
+        const cell = json?.table?.rows?.[0]?.c?.[0];
+        // f (formatted) талбар эхэлж авна, байхгүй бол v-г ашиглана
+        const val = cell?.f ?? cell?.v;
         if (val !== null && val !== undefined) {
-            CORRECT_PIN = String(val).trim();
+            // 1234.0 → "1234" болгоно
+            CORRECT_PIN = String(val).replace(/\.0+$/, '').trim();
         } else {
             throw new Error('config sheet хоосон байна');
         }
