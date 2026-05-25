@@ -416,8 +416,10 @@ let currentBranch = 'all';
 
 function parseDate(v) {
     if (!v) return null;
-    const m = String(v).match(/Date\((\d+),(\d+),(\d+)/);
-    if (m) return new Date(parseInt(m[1]), parseInt(m[2]), parseInt(m[3]));
+    // Date(year,month,day,hour,min,sec) — цаг минутыг бүгдийг авна
+    const m = String(v).match(/Date\((\d+),(\d+),(\d+)(?:,(\d+))?(?:,(\d+))?(?:,(\d+))?/);
+    if (m) return new Date(parseInt(m[1]), parseInt(m[2]), parseInt(m[3]),
+        parseInt(m[4]||0), parseInt(m[5]||0), parseInt(m[6]||0));
     return new Date(v);
 }
 function colMatches(n, kws) { const l = n.toLowerCase(); return kws.some(k => l.includes(k)); }
