@@ -233,7 +233,7 @@
 <!-- BRANCH TABS -->
 <div class="branch-bar">
     <div class="branch-tab active" id="tab-all" onclick="switchBranch('all')">📊 Нэгтгэсэн</div>
-    <div class="branch-tab" id="tab-branch0" onclick="switchBranch('branch0')">🏪 Гранд Сутай салбар</div>
+    <div class="branch-tab" id="tab-branch0" onclick="switchBranch('branch0')">🏪 Гранд сутай салбар</div>
     <div class="branch-tab" id="tab-branch1" onclick="switchBranch('branch1')">🔧 Хөдөлгүүр салбар</div>
 </div>
 
@@ -339,7 +339,7 @@
 // ============================================================
 const SHEET_ID   = '1o2oDCYeFGb1w6-7UHzwwcnZ9rEJCJvSIH3uejrAeIkE';
 const ORG_NAME   = 'Гранд Сутай ХХК';
-const BRANCHES   = ['Гранд Сутай салбар', 'Хөдөлгүүр салбар'];
+const BRANCHES   = ['Гранд сутай салбар', 'Хөдөлгүүр салбар'];
 // Form дээр салбар сонгох асуултын нэрийг агуулсан түлхүүр үг:
 const BRANCH_COL_KEYWORD = 'салбар';
 
@@ -460,15 +460,19 @@ async function loadData() {
             const obj = {};
             cols.forEach((c, i) => {
                 const cell = r.c[i];
-                obj[c] = (c === 'Timestamp' || c === 'Огноо')
-                    ? (cell ? parseDate(cell.v) : null)
-                    : (cell ? cell.v : null);
+                if (c === 'Timestamp' || c === 'Огноо') {
+                    // f талбарт цагтай бэлэн формат байна — үүнийг ашиглана
+                    obj[c] = cell ? (cell.f ? cell.f : parseDate(cell.v)) : null;
+                    obj['_ts_date'] = cell ? parseDate(cell.v) : null; // шүүлтэд хэрэглэнэ
+                } else {
+                    obj[c] = cell ? cell.v : null;
+                }
             });
             return obj;
         }).filter(r => {
             // Timestamp буюу огноотой мөрийг л тооцно — хоосон, header мөрийг хаяна
             const tsKey = Object.keys(r).find(k => k === 'Timestamp' || k === 'Огноо');
-            if (tsKey) return r[tsKey] instanceof Date && !isNaN(r[tsKey]);
+            if (tsKey) return r['_ts_date'] instanceof Date && !isNaN(r['_ts_date']);
             // Timestamp байхгүй бол хамгийн багадаа 2 утгатай байх ёстой
             return Object.values(r).filter(v => v !== null && v !== undefined && v !== '').length >= 2;
         });
@@ -506,11 +510,11 @@ function applyFilter() {
         const branchIdx = parseInt(currentBranch.replace('branch', ''));
         const branchName = BRANCHES[branchIdx];
         rows = rows.filter(r => r[DETECTED_COLS.branch] &&
-            String(r[DETECTED_COLS.branch]).trim().toLowerCase().includes(branchName.toLowerCase().substring(0, 6)));
+            String(r[DETECTED_COLS.branch]).trim().toLowerCase() === branchName.toLowerCase());
     }
 
-    if (fromVal) { const f = new Date(fromVal); rows = rows.filter(r => r[tsKey] && r[tsKey] >= f); }
-    if (toVal)   { const t = new Date(toVal); t.setHours(23,59,59); rows = rows.filter(r => r[tsKey] && r[tsKey] <= t); }
+    if (fromVal) { const f = new Date(fromVal); rows = rows.filter(r => r['_ts_date'] && r['_ts_date'] >= f); }
+    if (toVal)   { const t = new Date(toVal); t.setHours(23,59,59); rows = rows.filter(r => r['_ts_date'] && r['_ts_date'] <= t); }
 
     const label = currentBranch === 'all' ? 'Нийт' :
         BRANCHES[parseInt(currentBranch.replace('branch', ''))];
@@ -642,8 +646,8 @@ function exportExcel() {
         const branchIdx = parseInt(currentBranch.replace('branch', ''));
         rows = rows.filter(r => r[DETECTED_COLS.branch] && String(r[DETECTED_COLS.branch]).trim() === BRANCHES[branchIdx]);
     }
-    if (fromVal) { const f = new Date(fromVal); rows = rows.filter(r => r[tsKey] && r[tsKey] >= f); }
-    if (toVal)   { const t = new Date(toVal); t.setHours(23,59,59); rows = rows.filter(r => r[tsKey] && r[tsKey] <= t); }
+    if (fromVal) { const f = new Date(fromVal); rows = rows.filter(r => r['_ts_date'] && r['_ts_date'] >= f); }
+    if (toVal)   { const t = new Date(toVal); t.setHours(23,59,59); rows = rows.filter(r => r['_ts_date'] && r['_ts_date'] <= t); }
 
     if (!rows.length) { alert('Экспортлох өгөгдөл байхгүй байна.'); return; }
 
