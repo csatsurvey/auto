@@ -463,8 +463,11 @@ async function loadData() {
             });
             return obj;
         }).filter(r => {
-            // Хоосон мөр болон header-г шүүж хаяна
-            return Object.values(r).some(v => v !== null && v !== undefined && v !== '');
+            // Timestamp буюу огноотой мөрийг л тооцно — хоосон, header мөрийг хаяна
+            const tsKey = Object.keys(r).find(k => k === 'Timestamp' || k === 'Огноо');
+            if (tsKey) return r[tsKey] instanceof Date && !isNaN(r[tsKey]);
+            // Timestamp байхгүй бол хамгийн багадаа 2 утгатай байх ёстой
+            return Object.values(r).filter(v => v !== null && v !== undefined && v !== '').length >= 2;
         });
         DETECTED_COLS = detectColumns(cols, ALL_ROWS);
         if (DETECTED_COLS.feedback) document.getElementById('feedback-col-header').textContent = DETECTED_COLS.feedback;
