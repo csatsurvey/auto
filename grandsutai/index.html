@@ -444,7 +444,9 @@ async function loadData() {
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('error-div').style.display = 'none';
     try {
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+        // Sheet 0 (эхний sheet) — Form хариултуудын sheet
+        // gid=0 → эхний sheet (Form хариултууд). Өөр sheet бол gid= дугаарыг URL-аас авна
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=0`;
         const res  = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf(')')));
@@ -460,6 +462,9 @@ async function loadData() {
                     : (cell ? cell.v : null);
             });
             return obj;
+        }).filter(r => {
+            // Хоосон мөр болон header-г шүүж хаяна
+            return Object.values(r).some(v => v !== null && v !== undefined && v !== '');
         });
         DETECTED_COLS = detectColumns(cols, ALL_ROWS);
         if (DETECTED_COLS.feedback) document.getElementById('feedback-col-header').textContent = DETECTED_COLS.feedback;
