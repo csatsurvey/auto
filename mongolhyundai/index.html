@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Монгол Хьюндай Автомотив ХХК — Сэтгэл ханамжийн судалгаа</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -174,6 +175,35 @@
         .error-box { background: #fee2e2; border: 1px solid #fca5a5; border-radius: 8px; padding: 16px; color: #991b1b; font-size: 9pt; margin: 20px 0; }
         .info-note { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; color: #1e40af; font-size: 8.5pt; margin-bottom: 16px; }
 
+        /* PIE CHARTS */
+        .pie-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-bottom: 20px; }
+        .pie-card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .pie-title { font-size: 9pt; font-weight: 800; color: var(--primary); margin-bottom: 14px; line-height: 1.4; min-height: 36px; }
+        .pie-wrap { display: flex; align-items: center; gap: 16px; }
+        canvas.pie-canvas { width: 110px !important; height: 110px !important; flex-shrink: 0; }
+        .pie-legend { flex: 1; }
+        .pie-legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 8pt; color: var(--text); }
+        .pie-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        /* YES/NO карт */
+        .yesno-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-bottom: 20px; }
+        .yesno-card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .yesno-title { font-size: 9pt; font-weight: 800; color: var(--primary); margin-bottom: 14px; line-height: 1.4; }
+        .yesno-bars { display: flex; flex-direction: column; gap: 8px; }
+        .yesno-row { display: flex; align-items: center; gap: 8px; }
+        .yesno-label { font-size: 8.5pt; width: 50px; font-weight: 700; }
+        .yesno-track { flex: 1; background: #e8eef6; border-radius: 99px; height: 22px; overflow: hidden; }
+        .yesno-fill { height: 100%; border-radius: 99px; display: flex; align-items: center; padding-left: 8px; color: #fff; font-size: 8pt; font-weight: 800; min-width: 30px; }
+        .yesno-count { font-size: 9pt; font-weight: 800; width: 30px; text-align: right; }
+        /* MODAL */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 8888; display: none; align-items: center; justify-content: center; }
+        .modal-overlay.open { display: flex; }
+        .modal-box { background: #fff; border-radius: 16px; padding: 28px; max-width: 560px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .modal-title { font-size: 13pt; font-weight: 900; color: var(--primary); margin-bottom: 16px; }
+        .modal-close { float: right; background: #e2e8f0; border: none; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 9pt; font-weight: 800; }
+        .modal-row { display: flex; gap: 10px; margin-bottom: 8px; padding: 8px; background: #f8fafc; border-radius: 8px; font-size: 9pt; border-left: 3px solid var(--primary); }
+        .phone-btn { background: none; border: 1px solid var(--primary); border-radius: 6px; padding: 2px 8px; font-size: 8pt; font-weight: 800; color: var(--primary); cursor: pointer; white-space: nowrap; }
+        .phone-btn:hover { background: var(--primary); color: #fff; }
+
         @media (max-width: 768px) {
             .score-grid { grid-template-columns: repeat(2,1fr); }
             .nps-grid { grid-template-columns: 1fr 1fr; }
@@ -211,6 +241,17 @@
             <div class="pin-key" style="background:#e2e8f0;color:var(--muted);cursor:default"></div>
         </div>
         <div class="pin-error" id="pin-error"></div>
+    </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+    <div class="modal-box">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div class="modal-title" id="modal-title">Дэлгэрэнгүй</div>
+            <button class="modal-close" onclick="document.getElementById('modal-overlay').classList.remove('open')">✕ Хаах</button>
+        </div>
+        <div id="modal-body"></div>
     </div>
 </div>
 
@@ -271,6 +312,30 @@
                 <div class="label">CSAT</div>
                 <div class="value" id="csat-card">—</div>
                 <div class="unit">% сэтгэл хангалуун</div>
+            </div>
+        </div>
+
+        <!-- PIE CHARTS -->
+        <div id="pie-section" style="display:none">
+            <div class="chart-card">
+                <div class="chart-title">🥧 Сонголтот асуултуудын хуваарилалт</div>
+                <div class="pie-grid" id="pie-grid"></div>
+            </div>
+        </div>
+
+        <!-- YES/NO АСУУЛТ -->
+        <div id="yesno-section" style="display:none">
+            <div class="chart-card">
+                <div class="chart-title">✅ Тийм / Үгүй асуултын үр дүн</div>
+                <div class="yesno-grid" id="yesno-grid"></div>
+            </div>
+        </div>
+
+        <!-- УТАСНЫ ДУГААР -->
+        <div id="phone-section" style="display:none">
+            <div class="chart-card">
+                <div class="chart-title">📞 Холбогдох утасны дугаар үлдээсэн үйлчлүүлэгчид</div>
+                <div id="phone-list"></div>
             </div>
         </div>
 
@@ -463,9 +528,10 @@ async function loadData() {
             cols.forEach((c, i) => {
                 const cell = r.c[i];
                 if (c === 'Timestamp' || c === 'Огноо') {
+                    // cell.f = "25/05/2026 23:32:23" — цагтай бэлэн формат
+                    const fVal = (cell && cell.f != null) ? String(cell.f) : null;
                     const dateObj = cell ? parseDate(cell.v) : null;
-                    // Timestamp-г string хэлбэрт хадгална — цагийг агуулна
-                    obj[c] = (cell && cell.f) ? String(cell.f) : (dateObj instanceof Date && !isNaN(dateObj) ? dateObj.toLocaleString('mn-MN') : null);
+                    obj[c] = fVal || (dateObj instanceof Date && !isNaN(dateObj) ? dateObj.toLocaleString() : null);
                     obj['_ts_date'] = dateObj;
                 } else {
                     obj[c] = cell ? cell.v : null;
@@ -647,6 +713,205 @@ function render(rows) {
         document.getElementById('feedback-body').innerHTML =
             '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Санал хүсэлтийн багана илрүүлсэнгүй</td></tr>';
     }
+
+    // Pie / YesNo / Phone хэсгийг render хийнэ
+    renderPieCharts(rows);
+}
+
+// ── PIE CHARTS ─────────────────────────────────────────────
+const PIE_TEXT_COLS = ['4.', '8.', '9.', '10.']; // Эдгээр дугааруудтай text асуулт
+const YESNO_COLS   = ['9.', '10.']; // Тийм/Үгүй асуулт
+const PHONE_COL_KW = ['утас', 'дугаар', 'холбогдох'];
+const PIE_COLORS   = ['#1a2744','#c0392b','#10b981','#7c3aed','#0891b2','#db2777','#d97706','#0369a1','#dc2626','#059669'];
+
+let pieChartInstances = [];
+
+function renderPieCharts(rows) {
+    if (!rows.length) return;
+    const cols = Object.keys(rows[0]).filter(c => !c.startsWith('_'));
+    const textCols = cols.filter(c => {
+        const l = c.trim();
+        return PIE_TEXT_COLS.some(p => l.startsWith(p));
+    });
+
+    // YES/NO асуултууд
+    const ynCols = textCols.filter(c => YESNO_COLS.some(p => c.trim().startsWith(p)));
+    // Зөвхөн тоон биш, string өгөгдөлтэй text асуулт (pie-д харуулах)
+    const pieCols = textCols.filter(c => !ynCols.includes(c));
+
+    // PIE section
+    if (pieCols.length) {
+        document.getElementById('pie-section').style.display = 'block';
+        // Хуучин chart-уудыг устгана
+        pieChartInstances.forEach(ch => ch.destroy());
+        pieChartInstances = [];
+        const grid = document.getElementById('pie-grid');
+        grid.innerHTML = '';
+
+        pieCols.forEach(col => {
+            const vals = rows.map(r => r[col]).filter(v => v !== null && v !== undefined && String(v).trim() !== '');
+            if (!vals.length) return;
+            // Давтамж тооцно
+            const freq = {};
+            vals.forEach(v => { const k = String(v).trim(); freq[k] = (freq[k]||0) + 1; });
+            const labels = Object.keys(freq);
+            const data   = Object.values(freq);
+            const total  = data.reduce((a,b)=>a+b,0);
+
+            const card = document.createElement('div');
+            card.className = 'pie-card';
+            const shortTitle = col.replace(/^\d+\.\s*/, '').substring(0, 60);
+            card.innerHTML = `<div class="pie-title">${col.match(/^\d+/)?.[0] || ''}. ${shortTitle}${shortTitle.length >= 60 ? '...' : ''}</div>
+                <div class="pie-wrap">
+                    <canvas class="pie-canvas" id="pie-${col.substring(0,10).replace(/\s/g,'_')}"></canvas>
+                    <div class="pie-legend">${labels.map((l,i)=>`<div class="pie-legend-item"><div class="pie-dot" style="background:${PIE_COLORS[i%PIE_COLORS.length]}"></div><span>${l} — <b>${data[i]}</b> (${Math.round(data[i]/total*100)}%)</span></div>`).join('')}</div>
+                </div>`;
+            grid.appendChild(card);
+
+            const ctx = card.querySelector('canvas').getContext('2d');
+            const ch = new Chart(ctx, {
+                type: 'doughnut',
+                data: { labels, datasets: [{ data, backgroundColor: PIE_COLORS.slice(0, labels.length), borderWidth: 2, borderColor: '#fff' }] },
+                options: { responsive: false, plugins: { legend: { display: false } }, cutout: '55%' }
+            });
+            pieChartInstances.push(ch);
+        });
+    }
+
+    // YES/NO section
+    if (ynCols.length) {
+        document.getElementById('yesno-section').style.display = 'block';
+        const grid = document.getElementById('yesno-grid');
+        grid.innerHTML = '';
+
+        ynCols.forEach(col => {
+            // Тийм/Үгүй тодорхойлох — 1=Тийм, 2=Үгүй эсвэл text
+            const vals = rows.map(r => r[col]).filter(v => v !== null && v !== undefined);
+            if (!vals.length) return;
+            let yesCount = 0, noCount = 0;
+            vals.forEach(v => {
+                const n = Number(v);
+                if (n === 1 || String(v).toLowerCase().includes('тийм')) yesCount++;
+                else if (n === 2 || String(v).toLowerCase().includes('үгүй')) noCount++;
+            });
+            const total = yesCount + noCount;
+            if (!total) return;
+
+            // "Тийм" хариулсан үед нэмэлт тайлбар агуулсан col олох
+            const colNum = col.match(/^(\d+)\./)?.[1];
+            const detailCol = colNum ? Object.keys(rows[0]).find(c => c.includes(colNum) && c !== col && !PIE_TEXT_COLS.some(p => c.trim().startsWith(p))) : null;
+
+            const yesPct = Math.round(yesCount/total*100);
+            const noPct  = Math.round(noCount/total*100);
+            const shortTitle = col.replace(/^\d+\.\s*/, '').substring(0, 70);
+
+            const card = document.createElement('div');
+            card.className = 'yesno-card';
+            card.innerHTML = `<div class="yesno-title">${col.match(/^\d+/)?.[0] || ''}. ${shortTitle}</div>
+                <div class="yesno-bars">
+                    <div class="yesno-row">
+                        <div class="yesno-label" style="color:#10b981">Тийм</div>
+                        <div class="yesno-track"><div class="yesno-fill" style="width:${yesPct}%;background:#10b981">${yesCount}</div></div>
+                        <div class="yesno-count" style="color:#10b981">${yesPct}%</div>
+                    </div>
+                    <div class="yesno-row">
+                        <div class="yesno-label" style="color:#ef4444">Үгүй</div>
+                        <div class="yesno-track"><div class="yesno-fill" style="width:${noPct}%;background:#ef4444">${noCount}</div></div>
+                        <div class="yesno-count" style="color:#ef4444">${noPct}%</div>
+                    </div>
+                </div>
+                ${detailCol && yesCount > 0 ? `<div style="margin-top:12px"><button onclick="showYesDetails('${col.replace(/'/g,"\'")}','${detailCol.replace(/'/g,"\'")}',this)" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:6px 14px;font-size:8.5pt;font-weight:800;color:#1e40af;cursor:pointer">📋 Тийм гэсэн ${yesCount} хариултыг харах</button></div>` : ''}`;
+            grid.appendChild(card);
+        });
+    }
+
+    // PHONE section
+    const phoneKey = Object.keys(rows[0] || {}).find(k => PHONE_COL_KW.some(kw => k.toLowerCase().includes(kw)));
+    if (phoneKey) {
+        const phoneRows = rows.filter(r => r[phoneKey] && String(r[phoneKey]).trim() !== '' && String(r[phoneKey]).trim() !== 'null');
+        if (phoneRows.length) {
+            document.getElementById('phone-section').style.display = 'block';
+            const list = document.getElementById('phone-list');
+            list.innerHTML = `<div style="font-size:8.5pt;color:var(--muted);margin-bottom:12px">${phoneRows.length} үйлчлүүлэгч утасны дугаараа үлдээсэн байна</div>`;
+            const table = document.createElement('table');
+            table.style.cssText = 'width:100%;border-collapse:collapse;font-size:8.5pt';
+            table.innerHTML = `<thead><tr style="background:var(--primary);color:#fff">
+                <th style="padding:8px 12px;text-align:left">№</th>
+                <th style="padding:8px 12px;text-align:left">Огноо</th>
+                <th style="padding:8px 12px;text-align:left">Утасны дугаар</th>
+                <th style="padding:8px 12px;text-align:left">Дэлгэрэнгүй</th>
+            </tr></thead>`;
+            const tbody = document.createElement('tbody');
+            const tsKey2 = Object.keys(rows[0]).find(k => k === 'Timestamp' || k === 'Огноо') || 'Timestamp';
+            phoneRows.forEach((r, i) => {
+                const ts = r[tsKey2];
+                const d = (typeof ts === 'string' && ts.length > 5) ? ts : (ts instanceof Date && !isNaN(ts)) ? ts.toLocaleString() : '—';
+                const phone = String(r[phoneKey]).trim();
+                const tr = document.createElement('tr');
+                tr.style.cssText = i%2===0?'background:#fff':'background:#f8fafc';
+                tr.innerHTML = `<td style="padding:8px 12px;border-bottom:1px solid var(--border)">${i+1}</td>
+                    <td style="padding:8px 12px;border-bottom:1px solid var(--border)">${d}</td>
+                    <td style="padding:8px 12px;border-bottom:1px solid var(--border)">
+                        <button class="phone-btn" onclick="showPersonDetail(${JSON.stringify(r).replace(/</g,'&lt;')})">${phone}</button>
+                    </td>
+                    <td style="padding:8px 12px;border-bottom:1px solid var(--border)">
+                        <button onclick="showPersonDetail(${JSON.stringify(r).replace(/</g,'&lt;')})" style="background:none;border:none;color:var(--primary);font-size:8pt;font-weight:800;cursor:pointer">👁 Дэлгэрэнгүй →</button>
+                    </td>`;
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            list.appendChild(table);
+        }
+    }
+}
+
+function showYesDetails(col, detailCol, btn) {
+    const rows = getFilteredRows();
+    const details = rows.filter(r => {
+        const v = r[col];
+        return Number(v) === 1 || String(v||'').toLowerCase().includes('тийм');
+    }).map(r => r[detailCol]).filter(v => v && String(v).trim());
+
+    document.getElementById('modal-title').textContent = `"Тийм" гэсэн хариултын тайлбарууд (${details.length})`;
+    document.getElementById('modal-body').innerHTML = details.length
+        ? details.map((d,i) => `<div class="modal-row"><span style="font-weight:800;color:var(--primary);margin-right:8px">${i+1}.</span>${d}</div>`).join('')
+        : '<p style="color:var(--muted);font-size:9pt">Тайлбар байхгүй</p>';
+    document.getElementById('modal-overlay').classList.add('open');
+}
+
+function showPersonDetail(r) {
+    const tsKey2 = Object.keys(r).find(k => k === 'Timestamp' || k === 'Огноо') || 'Timestamp';
+    const ts = r[tsKey2];
+    const d = (typeof ts === 'string' && ts.length > 5) ? ts : '—';
+    const phoneKey2 = Object.keys(r).find(k => PHONE_COL_KW.some(kw => k.toLowerCase().includes(kw)));
+    const phone = phoneKey2 ? String(r[phoneKey2]) : '—';
+
+    document.getElementById('modal-title').textContent = `📋 ${phone} — Бөглөсөн мэдээлэл`;
+    const rows2 = Object.entries(r).filter(([k]) => !k.startsWith('_') && k !== 'Timestamp' && k !== 'Огноо');
+    document.getElementById('modal-body').innerHTML = `
+        <div class="modal-row" style="border-left-color:#10b981"><span style="font-weight:800;color:var(--muted);width:80px;flex-shrink:0">Огноо:</span>${d}</div>
+        ${rows2.map(([k,v]) => v !== null && v !== undefined && String(v).trim()
+            ? `<div class="modal-row"><span style="font-weight:800;color:var(--muted);width:80px;flex-shrink:0;font-size:7.5pt">${k.substring(0,30)}:</span><span>${v}</span></div>`
+            : '').join('')}`;
+    document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+    if (e.target === document.getElementById('modal-overlay'))
+        document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function getFilteredRows() {
+    const fromVal = document.getElementById('date-from').value;
+    const toVal   = document.getElementById('date-to').value;
+    let rows = [...ALL_ROWS];
+    if (currentBranch !== 'all' && DETECTED_COLS.branch) {
+        const branchIdx = parseInt(currentBranch.replace('branch', ''));
+        rows = rows.filter(r => r[DETECTED_COLS.branch] && String(r[DETECTED_COLS.branch]).trim().toLowerCase() === BRANCHES[branchIdx].toLowerCase());
+    }
+    if (fromVal) { const f = new Date(fromVal); rows = rows.filter(r => r['_ts_date'] && r['_ts_date'] >= f); }
+    if (toVal)   { const t = new Date(toVal); t.setHours(23,59,59); rows = rows.filter(r => r['_ts_date'] && r['_ts_date'] <= t); }
+    return rows;
 }
 
 // ── EXCEL EXPORT ────────────────────────────────────────────
