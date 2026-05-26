@@ -898,13 +898,39 @@ function showPersonDetail(r) {
     const phoneKey2 = Object.keys(r).find(k => PHONE_COL_KW.some(kw => k.toLowerCase().includes(kw)));
     const phone = phoneKey2 ? String(r[phoneKey2]) : '—';
 
-    document.getElementById('modal-title').textContent = `📋 ${phone} — Бөглөсөн мэдээлэл`;
-    const rows2 = Object.entries(r).filter(([k]) => !k.startsWith('_') && k !== 'Timestamp' && k !== 'Огноо');
-    document.getElementById('modal-body').innerHTML = `
-        <div class="modal-row" style="border-left-color:#10b981"><span style="font-weight:800;color:var(--muted);width:80px;flex-shrink:0">Огноо:</span>${d}</div>
-        ${rows2.map(([k,v]) => v !== null && v !== undefined && String(v).trim()
-            ? `<div class="modal-row"><span style="font-weight:800;color:var(--muted);width:80px;flex-shrink:0;font-size:7.5pt">${k.substring(0,30)}:</span><span>${v}</span></div>`
-            : '').join('')}`;
+    // Modal title
+    document.getElementById('modal-title').textContent = phone + ' — Бугд мэдээлэл';
+
+    // Modal body — DOM-оор байгуулна (innerHTML template literal ашиглахгуй)
+    const body = document.getElementById('modal-body');
+    body.innerHTML = '';
+
+    // Огноо мор
+    const dateRow = document.createElement('div');
+    dateRow.className = 'modal-row';
+    dateRow.style.borderLeftColor = '#10b981';
+    dateRow.innerHTML = '<span style="font-weight:800;color:var(--muted);min-width:80px;flex-shrink:0">Огноо:</span><span>' + d + '</span>';
+    body.appendChild(dateRow);
+
+    // Бусад мэдээлэл
+    Object.entries(r).forEach(function(entry) {
+        const k = entry[0];
+        const v = entry[1];
+        if (k.startsWith('_') || k === 'Timestamp' || k === 'Огноо') return;
+        if (v === null || v === undefined || String(v).trim() === '') return;
+        const row = document.createElement('div');
+        row.className = 'modal-row';
+        const label = document.createElement('span');
+        label.style.cssText = 'font-weight:800;color:#64748b;min-width:80px;flex-shrink:0;font-size:7.5pt;line-height:1.4';
+        label.textContent = k.substring(0, 40) + (k.length > 40 ? '...' : '') + ':';
+        const val = document.createElement('span');
+        val.style.cssText = 'font-size:9pt;line-height:1.5';
+        val.textContent = String(v);
+        row.appendChild(label);
+        row.appendChild(val);
+        body.appendChild(row);
+    });
+
     document.getElementById('modal-overlay').classList.add('open');
 }
 
