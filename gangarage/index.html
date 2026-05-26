@@ -376,8 +376,8 @@ const BRANCH_COL_KEYWORD = 'салбар';
 let CORRECT_PIN = null; // динамик, sheets-аас татна
 
 const NPS_KEYWORDS      = ['санал болгох', 'найз', 'танил'];
-const FEEDBACK_KEYWORDS = ['сайжруулбал', 'гомдол', 'санал', 'хүсэлт', 'нэмэлт'];
-const SKIP_KEYWORDS     = ['timestamp', 'огноо', 'цаг', 'салбар'];
+const FEEDBACK_KEYWORDS = ['сайжруулбал', 'юуг', 'талархал сайшаал'];
+const SKIP_KEYWORDS     = ['timestamp', 'огноо', 'цаг', 'салбар', 'column'];
 const RATING_MIN = 1; const RATING_MAX = 10;
 const BAR_COLORS = ['#1a2744','#c0392b','#10b981','#7c3aed','#0891b2','#db2777','#d97706','#0369a1'];
 // ============================================================
@@ -452,7 +452,13 @@ function parseDate(v) {
     return new Date(v);
 }
 function colMatches(n, kws) { const l = n.toLowerCase(); return kws.some(k => l.includes(k)); }
-function isSkipCol(n) { const l = n.toLowerCase(); return SKIP_KEYWORDS.some(k => l.includes(k)); }
+function isSkipCol(n) {
+    const l = n.toLowerCase();
+    if (SKIP_KEYWORDS.some(k => l.includes(k))) return true;
+    // Утасны дугаарын багана feedback-д орохгүй
+    if (PHONE_COL_KW.some(k => l.includes(k.toLowerCase()))) return true;
+    return false;
+}
 function isNumericCol(rows, col) {
     const vals = rows.map(r => r[col]).filter(v => v !== null && v !== undefined);
     if (!vals.length) return false;
@@ -464,7 +470,10 @@ function detectColumns(cols, rows) {
         if (!c) continue;
         if (c.toLowerCase().includes(BRANCH_COL_KEYWORD)) { r.branch = c; continue; }
         if (isSkipCol(c)) continue;
+        // Утасны дугаарын багана feedback-д орохгүй — эхлээд phone шалгана
+        if (PHONE_COL_KW.some(k => c.toLowerCase().includes(k.toLowerCase()))) continue;
         if (colMatches(c, NPS_KEYWORDS)) { r.nps = c; continue; }
+        // Feedback — зөвхөн 'юуг', 'сайжруулбал', 'талархал' гэсэн үгтэй багана
         if (colMatches(c, FEEDBACK_KEYWORDS)) { r.feedback = c; continue; }
         if (isNumericCol(rows, c)) r.rating.push(c);
     }
@@ -649,26 +658,25 @@ function render(rows) {
         }
     }
 
-    // FEEDBACK TABLE
+    // FEEDBACK TABLE — санал/гомдол бичсэн бүгдийг харуулна
     const fbKey = DETECTED_COLS.feedback;
     const tsKey = Object.keys(rows[0] || {}).find(k => k === 'Timestamp' || k === 'Огноо') || 'Timestamp';
     const branchKey = DETECTED_COLS.branch;
+    const phoneKey2 = Object.keys(rows[0] || {}).find(k => PHONE_COL_KW.some(kw => k.toLowerCase().includes(kw.toLowerCase())));
     if (fbKey) {
-        const html = rows.filter(r => r[fbKey] && String(r[fbKey]).trim()).map((r, i) => {
+        const fbRows = rows.filter(r => r[fbKey] && String(r[fbKey]).trim());
+        const fbHtml = fbRows.map((r, i) => {
             const ts = r[tsKey];
-            // Timestamp string эсвэл Date object-аас цаг авна
             let d = '—';
-            if (typeof ts === 'string' && ts.length > 5) {
-                d = ts; // "5/25/2026 22:04:58" шууд харуулна
-            } else if (ts instanceof Date && !isNaN(ts)) {
-                d = ts.toLocaleString('mn-MN', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-            } else if (r['_ts_display']) {
-                d = r['_ts_display'];
-            }
+            if (typeof ts === 'string' && ts.length > 5) { d = ts; }
+            else if (ts instanceof Date && !isNaN(ts)) { d = ts.toLocaleString(); }
+            else if (r['_ts_display']) { d = r['_ts_display']; }
             const br = branchKey && r[branchKey] ? String(r[branchKey]).substring(0, 12) : '—';
-            return `<tr><td>${i+1}</td><td style="font-size:7.5pt">${br}</td><td>${d}</td><td>${r[fbKey]}</td></tr>`;
+            const phone = phoneKey2 && r[phoneKey2] ? String(r[phoneKey2]).trim() : '';
+            const phoneTag = phone ? ' <span style="display:inline-block;background:#e0f2fe;color:#0369a1;border-radius:4px;padding:1px 6px;font-size:7pt;font-weight:800">tel:' + phone + '</span>' : '';
+            return '<tr><td>' + (i+1) + '</td><td style="font-size:7.5pt">' + br + '</td><td>' + d + '</td><td>' + r[fbKey] + phoneTag + '</td></tr>';
         }).join('');
-        document.getElementById('feedback-body').innerHTML = html ||
+        document.getElementById('feedback-body').innerHTML = fbHtml ||
             '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Санал хүсэлт байхгүй</td></tr>';
     } else {
         document.getElementById('feedback-body').innerHTML =
@@ -682,7 +690,7 @@ function render(rows) {
 }
 
 // ── PHONE & MODAL ───────────────────────────────────────────
-const PHONE_COL_KW = ['утас', 'дугаар', 'холбогдох'];
+const PHONE_COL_KW = ['дугаараа үлдээж', 'утасны дугаар', 'холбогдох утас', 'баярлалаа'];
 
 function renderPhoneSection(rows) {
     const phoneKey = Object.keys(rows[0] || {}).find(k => PHONE_COL_KW.some(kw => k.toLowerCase().includes(kw)));
