@@ -715,6 +715,7 @@ function render(rows) {
     }
 
     // Pie / YesNo / Phone хэсгийг render хийнэ
+    window._phoneRows = []; // Шинэчлэх үед цэвэрлэнэ
     renderPieCharts(rows);
 }
 
@@ -856,13 +857,17 @@ function renderPieCharts(rows) {
                 const phone = String(r[phoneKey]).trim();
                 const tr = document.createElement('tr');
                 tr.style.cssText = i%2===0?'background:#fff':'background:#f8fafc';
+                // Row-г window объектод хадгалж index-ээр дуудна
+                window._phoneRows = window._phoneRows || [];
+                window._phoneRows.push(r);
+                const rowIdx = window._phoneRows.length - 1;
                 tr.innerHTML = `<td style="padding:8px 12px;border-bottom:1px solid var(--border)">${i+1}</td>
                     <td style="padding:8px 12px;border-bottom:1px solid var(--border)">${d}</td>
                     <td style="padding:8px 12px;border-bottom:1px solid var(--border)">
-                        <button class="phone-btn" onclick="showPersonDetail(${JSON.stringify(r).replace(/</g,'&lt;')})">${phone}</button>
+                        <button class="phone-btn" onclick="showPersonDetail(window._phoneRows[${rowIdx}])">${phone}</button>
                     </td>
                     <td style="padding:8px 12px;border-bottom:1px solid var(--border)">
-                        <button onclick="showPersonDetail(${JSON.stringify(r).replace(/</g,'&lt;')})" style="background:none;border:none;color:var(--primary);font-size:8pt;font-weight:800;cursor:pointer">👁 Дэлгэрэнгүй →</button>
+                        <button onclick="showPersonDetail(window._phoneRows[${rowIdx}])" style="background:none;border:none;color:var(--primary);font-size:8pt;font-weight:800;cursor:pointer">👁 Дэлгэрэнгүй →</button>
                     </td>`;
                 tbody.appendChild(tr);
             });
