@@ -463,9 +463,10 @@ async function loadData() {
             cols.forEach((c, i) => {
                 const cell = r.c[i];
                 if (c === 'Timestamp' || c === 'Огноо') {
-                    // f талбарт цагтай бэлэн формат байна — үүнийг ашиглана
-                    obj[c] = cell ? (cell.f ? cell.f : parseDate(cell.v)) : null;
-                    obj['_ts_date'] = cell ? parseDate(cell.v) : null; // шүүлтэд хэрэглэнэ
+                    const dateObj = cell ? parseDate(cell.v) : null;
+                    // Timestamp-г string хэлбэрт хадгална — цагийг агуулна
+                    obj[c] = (cell && cell.f) ? String(cell.f) : (dateObj instanceof Date && !isNaN(dateObj) ? dateObj.toLocaleString('mn-MN') : null);
+                    obj['_ts_date'] = dateObj;
                 } else {
                     obj[c] = cell ? cell.v : null;
                 }
@@ -628,7 +629,15 @@ function render(rows) {
     if (fbKey) {
         const html = rows.filter(r => r[fbKey] && String(r[fbKey]).trim()).map((r, i) => {
             const ts = r[tsKey];
-            const d  = ts instanceof Date && !isNaN(ts) ? ts.toLocaleString('mn-MN', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+            // Timestamp string эсвэл Date object-аас цаг авна
+            let d = '—';
+            if (typeof ts === 'string' && ts.length > 5) {
+                d = ts; // "5/25/2026 22:04:58" шууд харуулна
+            } else if (ts instanceof Date && !isNaN(ts)) {
+                d = ts.toLocaleString('mn-MN', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+            } else if (r['_ts_display']) {
+                d = r['_ts_display'];
+            }
             const br = branchKey && r[branchKey] ? String(r[branchKey]).substring(0, 12) : '—';
             return `<tr><td>${i+1}</td><td style="font-size:7.5pt">${br}</td><td>${d}</td><td>${r[fbKey]}</td></tr>`;
         }).join('');
