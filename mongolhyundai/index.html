@@ -857,19 +857,19 @@ function renderPieCharts(rows) {
                 const phone = String(r[phoneKey]).trim();
                 const tr = document.createElement('tr');
                 tr.style.cssText = i%2===0?'background:#fff':'background:#f8fafc';
-                // Row-г window объектод хадгалж index-ээр дуудна
-                window._phoneRows = window._phoneRows || [];
-                window._phoneRows.push(r);
-                const rowIdx = window._phoneRows.length - 1;
                 tr.innerHTML = `<td style="padding:8px 12px;border-bottom:1px solid var(--border)">${i+1}</td>
                     <td style="padding:8px 12px;border-bottom:1px solid var(--border)">${d}</td>
                     <td style="padding:8px 12px;border-bottom:1px solid var(--border)">
-                        <button class="phone-btn" onclick="showPersonDetail(window._phoneRows[${rowIdx}])">${phone}</button>
+                        <button class="phone-btn" data-idx="${i}">${phone}</button>
                     </td>
                     <td style="padding:8px 12px;border-bottom:1px solid var(--border)">
-                        <button onclick="showPersonDetail(window._phoneRows[${rowIdx}])" style="background:none;border:none;color:var(--primary);font-size:8pt;font-weight:800;cursor:pointer">👁 Дэлгэрэнгүй →</button>
+                        <button class="detail-btn" data-idx="${i}" style="background:none;border:none;color:var(--primary);font-size:8pt;font-weight:800;cursor:pointer">👁 Дэлгэрэнгүй →</button>
                     </td>`;
+                // addEventListener-ээр холбоно — onclick attribute ашиглахгүй
                 tbody.appendChild(tr);
+                tr.querySelectorAll('[data-idx]').forEach(btn => {
+                    btn.addEventListener('click', () => showPersonDetail(phoneRows[i]));
+                });
             });
             table.appendChild(tbody);
             list.appendChild(table);
