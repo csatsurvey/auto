@@ -376,7 +376,8 @@ const BRANCH_COL_KEYWORD = 'салбар';
 let CORRECT_PIN = null; // динамик, sheets-аас татна
 
 const NPS_KEYWORDS      = ['санал болгох', 'найз', 'танил'];
-const FEEDBACK_KEYWORDS = ['сайжруулбал', 'юуг', 'талархал сайшаал'];
+const FEEDBACK_KEYWORDS = ['юуг сайжруулбал зүгээр', 'санал, гомдол байна уу'];
+const PHONE_COL_KW = ['дугаараа үлдээж', 'утасны дугаар', 'холбогдох утас', 'баярлалаа'];
 const SKIP_KEYWORDS     = ['timestamp', 'огноо', 'цаг', 'салбар', 'column'];
 const RATING_MIN = 1; const RATING_MAX = 10;
 const BAR_COLORS = ['#1a2744','#c0392b','#10b981','#7c3aed','#0891b2','#db2777','#d97706','#0369a1'];
@@ -690,7 +691,6 @@ function render(rows) {
 }
 
 // ── PHONE & MODAL ───────────────────────────────────────────
-const PHONE_COL_KW = ['дугаараа үлдээж', 'утасны дугаар', 'холбогдох утас', 'баярлалаа'];
 
 function renderPhoneSection(rows) {
     const phoneKey = Object.keys(rows[0] || {}).find(k => PHONE_COL_KW.some(kw => k.toLowerCase().includes(kw)));
