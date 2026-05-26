@@ -719,8 +719,12 @@ function render(rows) {
 }
 
 // ── PIE CHARTS ─────────────────────────────────────────────
-const PIE_TEXT_COLS = ['4.', '8.', '9.', '10.']; // Эдгээр дугааруудтай text асуулт
-const YESNO_COLS   = ['9.', '10.']; // Тийм/Үгүй асуулт
+// Pie-д харуулах асуултын дугаарын эхлэл (string/text хариулттай)
+const PIE_TEXT_COLS = ['4.', '8.']; 
+// Тийм/Үгүй асуулт — 1=Тийм, 2=Үгүй
+const YESNO_COLS   = ['9.', '10.'];
+// Тийм үед нэмэлт тайлбар агуулсан асуулт
+const YESNO_DETAIL = {'9.': 'Хэрэв 9', '10.': 'Хэрэв 10'};
 const PHONE_COL_KW = ['утас', 'дугаар', 'холбогдох'];
 const PIE_COLORS   = ['#1a2744','#c0392b','#10b981','#7c3aed','#0891b2','#db2777','#d97706','#0369a1','#dc2626','#059669'];
 
@@ -729,15 +733,17 @@ let pieChartInstances = [];
 function renderPieCharts(rows) {
     if (!rows.length) return;
     const cols = Object.keys(rows[0]).filter(c => !c.startsWith('_'));
-    const textCols = cols.filter(c => {
+    // PIE асуулт — 4. болон 8. дугааруудтай string/text багана
+    const pieCols = cols.filter(c => {
         const l = c.trim();
         return PIE_TEXT_COLS.some(p => l.startsWith(p));
     });
 
-    // YES/NO асуултууд
-    const ynCols = textCols.filter(c => YESNO_COLS.some(p => c.trim().startsWith(p)));
-    // Зөвхөн тоон биш, string өгөгдөлтэй text асуулт (pie-д харуулах)
-    const pieCols = textCols.filter(c => !ynCols.includes(c));
+    // YES/NO асуулт — 9. болон 10. дугааруудтай тоон багана
+    const ynCols = cols.filter(c => {
+        const l = c.trim();
+        return YESNO_COLS.some(p => l.startsWith(p)) && !l.toLowerCase().includes('хэрэв');
+    });
 
     // PIE section
     if (pieCols.length) {
@@ -798,8 +804,9 @@ function renderPieCharts(rows) {
             if (!total) return;
 
             // "Тийм" хариулсан үед нэмэлт тайлбар агуулсан col олох
-            const colNum = col.match(/^(\d+)\./)?.[1];
-            const detailCol = colNum ? Object.keys(rows[0]).find(c => c.includes(colNum) && c !== col && !PIE_TEXT_COLS.some(p => c.trim().startsWith(p))) : null;
+            const ynKey = YESNO_COLS.find(p => col.trim().startsWith(p));
+            const detailPrefix = ynKey ? YESNO_DETAIL[ynKey] : null;
+            const detailCol = detailPrefix ? Object.keys(rows[0]).find(c => c.startsWith(detailPrefix)) : null;
 
             const yesPct = Math.round(yesCount/total*100);
             const noPct  = Math.round(noCount/total*100);
