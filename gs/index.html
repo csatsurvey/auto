@@ -174,6 +174,16 @@
         .error-box { background: #fee2e2; border: 1px solid #fca5a5; border-radius: 8px; padding: 16px; color: #991b1b; font-size: 9pt; margin: 20px 0; }
         .info-note { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; color: #1e40af; font-size: 8.5pt; margin-bottom: 16px; }
 
+        /* MODAL */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 8888; display: none; align-items: center; justify-content: center; }
+        .modal-overlay.open { display: flex; }
+        .modal-box { background: #fff; border-radius: 16px; padding: 28px; max-width: 560px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .modal-title { font-size: 13pt; font-weight: 900; color: var(--primary); margin-bottom: 16px; }
+        .modal-close { float: right; background: #e2e8f0; border: none; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 9pt; font-weight: 800; }
+        .modal-row { display: flex; gap: 10px; margin-bottom: 8px; padding: 8px; background: #f8fafc; border-radius: 8px; font-size: 9pt; border-left: 3px solid var(--primary); }
+        .phone-btn { background: none; border: 1px solid var(--primary); border-radius: 6px; padding: 2px 8px; font-size: 8pt; font-weight: 800; color: var(--primary); cursor: pointer; white-space: nowrap; }
+        .phone-btn:hover { background: var(--primary); color: #fff; }
+
         @media (max-width: 768px) {
             .score-grid { grid-template-columns: repeat(2,1fr); }
             .nps-grid { grid-template-columns: 1fr 1fr; }
@@ -211,6 +221,17 @@
             <div class="pin-key" style="background:#e2e8f0;color:var(--muted);cursor:default"></div>
         </div>
         <div class="pin-error" id="pin-error"></div>
+    </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+    <div class="modal-box">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div class="modal-title" id="modal-title">Дэлгэрэнгүй</div>
+            <button class="modal-close" onclick="document.getElementById('modal-overlay').classList.remove('open')">✕ Хаах</button>
+        </div>
+        <div id="modal-body"></div>
     </div>
 </div>
 
@@ -313,6 +334,14 @@
                 <div style="grid-column:1/-1;display:flex;justify-content:space-between;font-size:7.5pt;color:var(--muted)">
                     <span>-100 (Хамгийн муу)</span><span>0</span><span>+100 (Хамгийн сайн)</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- УТАСНЫ ДУГААР -->
+        <div id="phone-section" style="display:none">
+            <div class="chart-card">
+                <div class="chart-title">📞 Холбогдох утасны дугаар үлдээсэн үйлчлүүлэгчид</div>
+                <div id="phone-list"></div>
             </div>
         </div>
 
@@ -463,12 +492,8 @@ async function loadData() {
                 const cell = r.c[i];
                 if (c === 'Timestamp' || c === 'Огноо') {
                     const dateObj = cell ? parseDate(cell.v) : null;
-                    obj[c] = dateObj;
-                    // f талбар заавал авна — "25/05/2026 23:32:23" хэлбэртэй
-                    const fStr = (cell && cell.f) ? String(cell.f) : null;
-                    obj['_ts_display'] = fStr || (dateObj instanceof Date && !isNaN(dateObj)
-                        ? dateObj.toLocaleString('mn-MN', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
-                        : null);
+                    // Timestamp-г string хэлбэрт хадгална — цагийг агуулна
+                    obj[c] = (cell && cell.f) ? String(cell.f) : (dateObj instanceof Date && !isNaN(dateObj) ? dateObj.toLocaleString('mn-MN') : null);
                     obj['_ts_date'] = dateObj;
                 } else {
                     obj[c] = cell ? cell.v : null;
@@ -632,7 +657,15 @@ function render(rows) {
     if (fbKey) {
         const html = rows.filter(r => r[fbKey] && String(r[fbKey]).trim()).map((r, i) => {
             const ts = r[tsKey];
-            const d  = r['_ts_display'] || (ts instanceof Date && !isNaN(ts) ? ts.toLocaleString('mn-MN', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—');
+            // Timestamp string эсвэл Date object-аас цаг авна
+            let d = '—';
+            if (typeof ts === 'string' && ts.length > 5) {
+                d = ts; // "5/25/2026 22:04:58" шууд харуулна
+            } else if (ts instanceof Date && !isNaN(ts)) {
+                d = ts.toLocaleString('mn-MN', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+            } else if (r['_ts_display']) {
+                d = r['_ts_display'];
+            }
             const br = branchKey && r[branchKey] ? String(r[branchKey]).substring(0, 12) : '—';
             return `<tr><td>${i+1}</td><td style="font-size:7.5pt">${br}</td><td>${d}</td><td>${r[fbKey]}</td></tr>`;
         }).join('');
@@ -642,6 +675,93 @@ function render(rows) {
         document.getElementById('feedback-body').innerHTML =
             '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Санал хүсэлтийн багана илрүүлсэнгүй</td></tr>';
     }
+
+    // Phone section render
+    document.getElementById('phone-section').style.display = 'none';
+    document.getElementById('phone-list').innerHTML = '';
+    if (rows.length) renderPhoneSection(rows);
+}
+
+// ── PHONE & MODAL ───────────────────────────────────────────
+const PHONE_COL_KW = ['утас', 'дугаар', 'холбогдох'];
+
+function renderPhoneSection(rows) {
+    const phoneKey = Object.keys(rows[0] || {}).find(k => PHONE_COL_KW.some(kw => k.toLowerCase().includes(kw)));
+    if (!phoneKey) return;
+    const phoneRows = rows.filter(r => r[phoneKey] && String(r[phoneKey]).trim() !== '' && String(r[phoneKey]).trim() !== 'null');
+    if (!phoneRows.length) return;
+
+    document.getElementById('phone-section').style.display = 'block';
+    const list = document.getElementById('phone-list');
+    list.innerHTML = '<div style="font-size:8.5pt;color:var(--muted);margin-bottom:12px">' + phoneRows.length + ' үйлчлүүлэгч утасны дугаараа үлдээсэн байна</div>';
+
+    const table = document.createElement('table');
+    table.style.cssText = 'width:100%;border-collapse:collapse;font-size:8.5pt';
+    table.innerHTML = '<thead><tr style="background:var(--primary);color:#fff"><th style="padding:8px 12px;text-align:left">№</th><th style="padding:8px 12px;text-align:left">Огноо</th><th style="padding:8px 12px;text-align:left">Утасны дугаар</th><th style="padding:8px 12px;text-align:left">Дэлгэрэнгүй</th></tr></thead>';
+    const tbody = document.createElement('tbody');
+    const tsKey2 = Object.keys(rows[0]).find(k => k === 'Timestamp' || k === 'Огноо') || 'Timestamp';
+
+    phoneRows.forEach(function(r, i) {
+        const ts = r[tsKey2];
+        const d = (typeof ts === 'string' && ts.length > 5) ? ts : (ts instanceof Date && !isNaN(ts)) ? ts.toLocaleString() : '—';
+        const phone = String(r[phoneKey]).trim();
+        const tr = document.createElement('tr');
+        tr.style.cssText = i%2===0 ? 'background:#fff' : 'background:#f8fafc';
+
+        const td1 = document.createElement('td'); td1.style.cssText = 'padding:8px 12px;border-bottom:1px solid var(--border)'; td1.textContent = i+1; tr.appendChild(td1);
+        const td2 = document.createElement('td'); td2.style.cssText = 'padding:8px 12px;border-bottom:1px solid var(--border)'; td2.textContent = d; tr.appendChild(td2);
+        const td3 = document.createElement('td'); td3.style.cssText = 'padding:8px 12px;border-bottom:1px solid var(--border)';
+        const btn = document.createElement('button'); btn.className = 'phone-btn'; btn.textContent = phone;
+        btn.addEventListener('click', function() { showPersonDetail(r); });
+        td3.appendChild(btn); tr.appendChild(td3);
+        const td4 = document.createElement('td'); td4.style.cssText = 'padding:8px 12px;border-bottom:1px solid var(--border)';
+        const btn2 = document.createElement('button'); btn2.style.cssText = 'background:none;border:none;color:var(--primary);font-size:8pt;font-weight:800;cursor:pointer'; btn2.textContent = '👁 Дэлгэрэнгүй →';
+        btn2.addEventListener('click', function() { showPersonDetail(r); });
+        td4.appendChild(btn2); tr.appendChild(td4);
+        tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    list.appendChild(table);
+}
+
+function showPersonDetail(r) {
+    const tsKey2 = Object.keys(r).find(k => k === 'Timestamp' || k === 'Огноо') || 'Timestamp';
+    const ts = r[tsKey2];
+    const d = (typeof ts === 'string' && ts.length > 5) ? ts : '—';
+    const phoneKey2 = Object.keys(r).find(k => PHONE_COL_KW.some(kw => k.toLowerCase().includes(kw)));
+    const phone = phoneKey2 ? String(r[phoneKey2]) : '—';
+
+    document.getElementById('modal-title').textContent = phone + ' — Бугд мэдээлэл';
+    const body = document.getElementById('modal-body');
+    body.innerHTML = '';
+
+    const dateRow = document.createElement('div');
+    dateRow.className = 'modal-row';
+    dateRow.style.borderLeftColor = '#10b981';
+    dateRow.innerHTML = '<span style="font-weight:800;color:var(--muted);min-width:80px;flex-shrink:0">Огноо:</span><span>' + d + '</span>';
+    body.appendChild(dateRow);
+
+    Object.entries(r).forEach(function(entry) {
+        const k = entry[0]; const v = entry[1];
+        if (k.startsWith('_') || k === 'Timestamp' || k === 'Огноо') return;
+        if (v === null || v === undefined || String(v).trim() === '') return;
+        const row = document.createElement('div');
+        row.className = 'modal-row';
+        const label = document.createElement('span');
+        label.style.cssText = 'font-weight:800;color:#64748b;min-width:80px;flex-shrink:0;font-size:7.5pt;line-height:1.4';
+        label.textContent = k.substring(0, 40) + (k.length > 40 ? '...' : '') + ':';
+        const val = document.createElement('span');
+        val.style.cssText = 'font-size:9pt;line-height:1.5';
+        val.textContent = String(v);
+        row.appendChild(label); row.appendChild(val);
+        body.appendChild(row);
+    });
+    document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+    if (e.target === document.getElementById('modal-overlay'))
+        document.getElementById('modal-overlay').classList.remove('open');
 }
 
 // ── EXCEL EXPORT ────────────────────────────────────────────
